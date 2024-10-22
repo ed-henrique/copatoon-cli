@@ -16,7 +16,11 @@ const (
 )
 
 const (
-	accel = 2
+	accel                = 2
+	width                = 80
+	height               = 21
+	goalkeeperRangeInit  = height / 3
+	goalkeeperRangeFinal = 2*goalkeeperRangeInit - 1
 )
 
 var (
@@ -29,15 +33,20 @@ type gameModel struct {
 	windowWidth          int
 	windowHeight         int
 	hasInsufficientSpace bool
+
+	goalkeeper *GoalkeeperModel
 }
 
 func NewGameModel() gameModel {
+	goalKeeper := NewGoalkeeperModel(goalkeeperRangeInit, goalkeeperRangeFinal)
+
 	return gameModel{
 		x:                    0,
 		y:                    0,
-		windowWidth:          80,
-		windowHeight:         21,
+		windowWidth:          width,
+		windowHeight:         height,
 		hasInsufficientSpace: false,
+		goalkeeper:           &goalKeeper,
 	}
 }
 
@@ -55,6 +64,10 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.hasInsufficientSpace = false
 		}
 	case tea.KeyMsg:
+		newGoalKeeper, _ := m.goalkeeper.Update(msg)
+		newGoalKeeperModel := newGoalKeeper.(GoalkeeperModel)
+		m.goalkeeper = &newGoalKeeperModel
+
 		switch msg.String() {
 		case "up":
 			if m.y > 0 {
@@ -94,7 +107,9 @@ func (m gameModel) View() string {
 
 	for i := range m.windowHeight {
 		for j := range m.windowWidth {
-			if i == m.y && j == m.x {
+			if i == m.goalkeeper.y && j == 4 {
+				sb.WriteString(m.goalkeeper.View())
+			} else if i == m.y && j == m.x {
 				sb.WriteString(playerPosition)
 			} else {
 				sb.WriteString(string(goal[i][j]))
