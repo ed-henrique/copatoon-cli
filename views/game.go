@@ -1,6 +1,7 @@
 package views
 
 import (
+	"copatoon/components"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -23,16 +24,20 @@ var (
 )
 
 type gameModel struct {
-	x            int
-	y            int
-	windowWidth  int
-	windowHeight int
+	x                    int
+	y                    int
+	windowWidth          int
+	windowHeight         int
+	hasInsufficientSpace bool
 }
 
 func NewGameModel() gameModel {
 	return gameModel{
-		x: 0,
-		y: 0,
+		x:                    0,
+		y:                    0,
+		windowWidth:          80,
+		windowHeight:         21,
+		hasInsufficientSpace: false,
 	}
 }
 
@@ -43,10 +48,12 @@ func (m gameModel) Init() tea.Cmd {
 func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.windowWidth, m.windowHeight = min(80, msg.Width-4), min(20, msg.Height-2)
-		m.x = min(m.x, m.windowWidth-1)
-		m.y = min(m.y, m.windowHeight-1)
-		clearTerminal()
+		if msg.Width < m.windowWidth || msg.Height < m.windowHeight {
+			m.hasInsufficientSpace = true
+			clearTerminal()
+		} else {
+			m.hasInsufficientSpace = false
+		}
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up":
@@ -77,24 +84,20 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m gameModel) View() string {
-	var (
-		err error
-		sb  strings.Builder
-	)
+	var sb strings.Builder
+
+	if m.hasInsufficientSpace {
+		return "There's not enough space to play the game."
+	}
+
+	goal := components.Goal(m.windowWidth, m.windowHeight)
 
 	for i := range m.windowHeight {
 		for j := range m.windowWidth {
-
 			if i == m.y && j == m.x {
-				_, err = sb.WriteString(playerPosition)
-				if err != nil {
-					panic(err)
-				}
+				sb.WriteString(playerPosition)
 			} else {
-				_, err = sb.WriteString(" ")
-				if err != nil {
-					panic(err)
-				}
+				sb.WriteString(string(goal[i][j]))
 			}
 		}
 
